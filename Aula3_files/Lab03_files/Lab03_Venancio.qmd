@@ -1,0 +1,169 @@
+---
+title: "Laboratório 3: Dados relacionais e operações do tipo join"
+author: "Letícia da Costa Venancio - 250125"
+format: pdf
+editor: visual
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+## Carregando pacotes
+
+```{r}
+library(readr)
+library(dplyr)
+```
+
+### 1. Importe, utilizando o pacote `readr`, cada um dos três arquivos disponíveis. Os objetos resultantes devem ser chamados `flights`, `airlines` e `airports`.
+
+#### Para o arquivo de aeroportos, importe apenas as colunas `IATA_CODE`, `CITY`, `STATE`, `LATITUDE`, `LONGITUDE`;
+
+```{r}
+airports <- read_csv("airports.csv", col_types = cols_only(
+    IATA_CODE = col_character(),
+    CITY      = col_character(),
+    STATE     = col_character(),
+    LATITUDE  = col_double(),
+    LONGITUDE = col_double())
+)
+```
+
+```{r}
+airlines <- read_csv("airlines.csv", col_types = cols_only(
+    IATA_CODE = col_character(),
+    AIRLINE = col_character())
+)
+```
+
+#### Para o arquivo de vôos:
+
+#### a. Importe apenas as colunas `DESTINATION_AIRPORT` e `ARRIVAL_DELAY`;
+
+#### b. Leia apenas 1 milhão de linhas por vez;
+
+#### c. Remova vôos em que o aeroporto de destino comece com a letra 1;
+
+#### d. Remova registros em que existam pelo menos uma coluna faltante;
+
+#### e. Determine, para cada parte do arquivo, as estatísticas suficientes para a determinação do atraso médio por aeroporto de destino;
+
+#### f. Ao finalizar a leitura do arquivo, combine as estatísticas suficientes de modo a produzir a média de atraso por aeroporto.
+
+```{r}
+cols_flights <- cols_only(
+  DESTINATION_AIRPORT = 'c',
+  ARRIVAL_DELAY        = 'i'
+)
+
+getStats <- function(input, pos){
+  input %>%
+    filter(!is.na(DESTINATION_AIRPORT), !is.na(ARRIVAL_DELAY)) %>%  # (d)
+    filter(!startsWith(DESTINATION_AIRPORT, "1")) %>%                # (c)
+    group_by(DESTINATION_AIRPORT) %>%
+    summarise(
+      soma = sum(ARRIVAL_DELAY),                                     # (e)
+      n    = n(),
+      .groups = 'drop'
+    )
+}
+```
+
+```{r}
+# (b)
+stats_flights <- read_csv_chunked('flights.csv.zip',
+  callback   = DataFrameCallback$new(getStats),
+  chunk_size = 1e6,
+  col_types  = cols_flights)
+```
+
+```{r}
+# (f)
+flights <- stats_flights %>%
+  group_by(DESTINATION_AIRPORT) %>%
+  summarise(soma = sum(soma),
+            n    = sum(n),
+            .groups = 'drop') %>%
+  mutate(atraso_medio = soma / n) %>%
+  select(DESTINATION_AIRPORT, atraso_medio)
+```
+
+```{r}
+flights
+```
+
+### 2. Selecione a operação apropriada join para incluir, na tabela `flights`, as colunas `CITY` e `STATE` do objeto `airports`. Para executar esta tarefa:
+
+#### a. Identifique a coluna que é a chave na tabela `flights`;
+
+A chave em `flights` é `DESTINATION_AIRPORT`.
+
+#### b. Identifique a coluna que é a chave na tabela `airports`;
+
+A chave em `airports` é `IATA_CODE`.
+
+#### c. Quais são os aeroportos que estão listados em `flights`, mas estão ausentes em `airports`?
+
+```{r}
+flights %>% 
+  anti_join(airports, by = c("DESTINATION_AIRPORT" = "IATA_CODE"))
+```
+
+Não há nenhum aeroporto listado em `flights` que está ausente em `airports`.
+
+
+#### d. Apresente o comando que combine ambas as tabelas, indicando explicitamente as chaves;
+
+#### e. Armazene a tabela resultante no objeto `flights`.
+
+```{r}
+flights <- flights %>%
+  left_join(airports, by = c("DESTINATION_AIRPORT" = "IATA_CODE"))
+
+flights
+```
+
+### 3. Quantos aeroportos cada estado possui? Apresente uma tabela ordenada de forma decrescente (no número de aeroportos).
+
+```{r}
+airports %>%
+  count(STATE, name = "num_aeroportos") %>%
+  arrange(desc(num_aeroportos))
+```
+
+### 4. Apresente um mapa representando todos os atrasos observados por aeroporto.
+
+#### a. Carregue o pacote leaflet;
+
+```{r}
+library(leaflet)
+```
+
+#### b. Combine os comandos leaflet, addTiles e addMarkers para a criação de um mapa básico;
+
+#### c. Armazene o grafico em b) numa variável chamada this;
+
+```{r}
+this <- flights %>%
+  filter(!is.na(LATITUDE), !is.na(LONGITUDE)) %>%
+  leaflet() %>%
+  addTiles() %>%
+  addMarkers(lng   = ~LONGITUDE,
+             lat   = ~LATITUDE,
+             popup = ~paste0(CITY, ", ", STATE,"<br>Atraso medio: ", 
+                             round(atraso_medio, 1), " min"))
+
+this
+```
+
+#### d. Adicione as duas linhas abaixo após a criação da variável this (apenas se você estiver usando Jupyter):
+
+Como não estou usando Jupyter, não foi possível realizar esse tópico.
+
+
+```{r}
+Sys.setenv(TZ = "America/Sao_Paulo")
+Sys.time()
+```
+
