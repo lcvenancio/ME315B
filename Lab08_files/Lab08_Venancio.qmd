@@ -1,0 +1,92 @@
+---
+title: "Laboratório 8: Dados Relacionais com Polars"
+author: "Letícia da Costa Venancio - 250125"
+format: pdf
+editor: visual
+---
+
+```{r}
+library(reticulate)
+```
+
+```{r}
+py_require("polars")
+py_require("matplotlib")
+```
+
+```{python}
+import polars as pl
+```
+
+# Leitura dos dados
+
+```{python}
+basics = pl.read_csv("title.basics0.tsv.gz", separator="\t", null_values=r"\N")
+
+ratings = pl.read_csv("title.ratings.tsv.gz", separator="\t", null_values=r"\N")
+
+principals = pl.read_csv("title.principals0.tsv.gz", separator="\t", null_values=r"\N")
+```
+
+## 1. Quais são os 5 filmes com as maiores notas (averageRating)? Apresente uma solução capaz de desempatar os filmes baseando-se no número de votos recebidos.
+
+```{python}
+maiores_notas = (basics.filter(pl.col("titleType") == "movie")
+                       .join(ratings, on="tconst", how="inner")
+                       .sort(by=["averageRating", "numVotes"], descending=[True, True])
+                       .select(["primaryTitle", "averageRating", "numVotes"])
+                       .head(5))
+
+print(maiores_notas)
+```
+
+## 2. Qual é o gênero mais frequente entre os filmes com nota maior que 8?
+
+```{python}
+genero_freq = (basics.filter(pl.col("titleType") == "movie")
+                     .join(ratings.filter(pl.col("averageRating") > 8), 
+                                          on="tconst", how="inner")
+                     .filter(pl.col("genres").is_not_null())
+                     .with_columns(pl.col("genres").str.split(","))
+                     .explode("genres")
+                     .group_by("genres")
+                     .agg(pl.len().alias("frequencia"))
+                     .sort("frequencia", descending=True)
+                     .head(1))
+
+print(genero_freq)
+```
+
+## 3. Quais são os 3 atores/atrizes que mais participaram de filmes com nota maior que 7.5?
+
+```{python}
+participacao_atores = (principals
+                       .filter(pl.col("category")
+                       .is_in(["actor", "actress"]))
+                       .join(basics.filter(pl.col("titleType") == "movie"), 
+                                           on="tconst", how="inner")
+                       .join(ratings.filter(pl.col("averageRating") > 7.5), 
+                                            on="tconst", how="inner")
+                       .group_by("nconst")
+                       .agg(pl.col("tconst").n_unique().alias("total_filmes"))
+                       .sort("total_filmes", descending=True)
+                       .head(3))
+
+print(participacao_atores)
+```
+
+```{r}
+lubridate::now(tzone = "America/Sao_Paulo")
+```
+
+
+
+
+
+
+
+
+
+
+
+
