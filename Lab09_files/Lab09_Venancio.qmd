@@ -1,0 +1,117 @@
+---
+title: "Laboratório 9"
+author: "Letícia da Costa Venancio - 250125"
+format: pdf
+editor: visual
+jupyter: python3
+---
+
+```{r}
+library(reticulate)
+py_require("polars")
+py_require("pyarrow")
+py_require("plotnine")
+```
+
+
+## 1. Importe o conjunto de dados diamonds, cujo arquivo está disponível no website da disciplina.
+
+Importei o arquivo da biblioteca plotnine.data, como foi mencionado no laboratório que ela estava disponível.
+
+```{python}
+import polars as pl
+from plotnine import *
+from plotnine.data import diamonds as diamonds
+
+diamonds = pl.DataFrame(diamonds)
+diamonds.head()
+```
+
+
+
+## 2. Crie uma visualização de dados que descreva a associação existente entre as variáveis peso (carat) e preço (price). Que ações você tomou para garantir que você produziu um gráfico de boa qualidade? Escreva um parágrafo comunicando os seus achados.
+
+```{python}
+graf2 = (
+   ggplot(diamonds)
+    + aes(x="carat", y="price")
+    + geom_point(alpha=0.15, size=0.5)
+    + theme_bw()
+    + labs(
+        x="Peso (quilates)",
+        y="Preço (US$)",
+        title="Peso e preço dos diamantes",
+        subtitle="Cada ponto representa um diamante"
+    )
+    + theme(
+        figure_size=(9, 5),
+        plot_title=element_text(size=14),
+        plot_subtitle=element_text(size=10),
+        axis_title=element_text(size=11)
+    )
+)
+
+graf2
+```
+
+O gráfico permite observar que diamantes mais pesados apresentam preços maiores. Entretanto, há variação nos preços de diamantes com pesos semelhantes, indicando que o peso não explica sozinho todas as diferenças de preço.
+
+Para melhorar a qualidade da visualização, foi escolhido um gráfico de dispersão, também foi reduzida a opacidade dos pontos para diminuir a sobreposição e foram adicionados título e rótulos aos eixos. Dessa forma, o gráfico fica mais claro e facilita a identificação da tendência geral.
+
+
+## 3. A relação identificada na questão anterior é a mesma relação presente nos diferentes cortes de diamantes? Crie uma visualização que demonstre seus achados eficientemente. Descreva sua conclusão em um parágrafo.
+
+```{python}
+graf3 = (
+    ggplot(diamonds)
+    + aes(x="carat", y="price")
+    + geom_point(alpha=0.2, size=0.5)
+    + facet_wrap("cut", ncol=3)
+    + theme_bw()
+    + labs(
+        x="Peso do diamante (quilates)",
+        y="Preço (dólares)",
+        title="Relação entre peso e preço por qualidade do corte"
+    )
+)
+
+graf3
+```
+
+A associação entre peso e preço é positiva nas diferentes categorias de corte, visto que diamantes mais pesados tendem a apresentar preços maiores. Entretanto, a distribuição dos pontos varia entre os painéis, indicando diferenças na distribuição de peso e preço entre as categorias. A utilização de facetas facilita essa comparação, pois permite observar cada grupo separadamente, mantendo a mesma escala dos eixos.
+
+
+## 4. Crie uma visualização que mostre a relação entre preço e peso do diamante, considerando as diferentes combinações de qualidade de corte, cor e clareza do diamante. Quais foram as dificuldades encontradas? A relação entre preço e peso é a mesma para diferentes configurações de diamantes?
+
+```{python}
+graf4 = (
+    ggplot(diamonds)
+    + aes(x="carat", y="price", color="clarity")
+    + geom_point(alpha=0.5, size=0.6)
+    + facet_grid("color", "cut")
+    + theme_bw()
+    + labs(
+        x="Peso do diamante (quilates)",
+        y="Preço (dólares)",
+        color="Clareza",
+        title="Peso e preço dos diamantes por suas características",
+        subtitle="Painéis por cor e corte; cores dos pontos por clareza"
+    )
+    + theme(figure_size=(14, 10))
+)
+
+graf4
+```
+
+A principal dificuldade encontrada foi representar tantas combinações sem tornar o gráfico muito poluído. Existem cinco categorias de corte, sete de cor e oito de clareza, o que pode levar até 280 combinações possíveis. O uso de facetas e cores permite representar essas dimensões, embora alguns painéis apresentem sobreposição de pontos.
+
+A relação entre peso e preço continua positiva nas diferentes configurações, mas a distribuição dos preços varia entre os grupos. Portanto, a relação não é necessariamente igual para todas as combinações de corte, cor e clareza. O gráfico permite identificar padrões e diferenças entre os grupos, mas não é suficiente, por si só, para determinar o efeito isolado de cada característica sobre o preço.
+
+
+```{r}
+Sys.setenv(TZ = "America/Sao_Paulo")
+Sys.time()
+```
+
+
+
